@@ -44,6 +44,13 @@ class AuthService {
       apiClient.setToken(token);
       return { user, token };
     }
+    
+    // Handle error response format
+    if (response.errors && Array.isArray(response.errors) && response.errors.length > 0) {
+      const firstError = response.errors[0];
+      throw new Error(firstError.description || firstError.code || 'Login failed');
+    }
+    
     throw new Error(response.topError?.description || 'Login failed');
   }
 
@@ -175,6 +182,11 @@ class AuthService {
   async requestEmailOTP(email: string): Promise<void> {
     const response = await apiClient.post('/Auth/request-email-otp', { email });
     if (!response.isSuccess) {
+      // Handle error response format
+      if (response.errors && Array.isArray(response.errors) && response.errors.length > 0) {
+        const firstError = response.errors[0];
+        throw new Error(firstError.description || firstError.code || 'Failed to request email OTP');
+      }
       throw new Error(response.topError?.description || 'Failed to request email OTP');
     }
   }
@@ -231,6 +243,13 @@ class AuthService {
         throw new Error('Invalid response format from server');
       }
     }
+    
+    // Handle error response format
+    if (response.errors && Array.isArray(response.errors) && response.errors.length > 0) {
+      const firstError = response.errors[0];
+      throw new Error(firstError.description || firstError.code || 'Failed to login user');
+    }
+    
     throw new Error(response.topError?.description || 'Failed to login user');
   }
 }

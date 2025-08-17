@@ -1,7 +1,7 @@
 import type { ApiResponse } from '../types/types';
 
 class ApiClient {
-  private baseURL: string;
+  private baseURL = 'https://votesystemrami.tryasp.net/api';
   private token: string | null;
 
 
@@ -62,9 +62,8 @@ class ApiClient {
           throw new Error('Unauthorized');
         }
         
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ ApiClient error response:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}`);
+        const data = await response.json().catch(() => ({}));
+        this.handleErrorResponse(response, data);
       }
 
       const data = await response.json();
@@ -77,6 +76,38 @@ class ApiClient {
       console.error('  Options:', options);
       throw error;
     }
+  }
+
+  private handleErrorResponse(response: Response, data: any): never {
+    console.error('❌ ApiClient error response:', data);
+    
+    // Handle the specific error format from the API
+    if (data && Array.isArray(data) && data.length > 0) {
+      // API returns array of error objects: [{ code, description, type }]
+      const firstError = data[0];
+      if (firstError.description) {
+        throw new Error(firstError.description);
+      } else if (firstError.code) {
+        throw new Error(firstError.code);
+      }
+    }
+    
+    // Handle the standard error format
+    if (data && data.topError && data.topError.description) {
+      throw new Error(data.topError.description);
+    }
+    
+    // Fallback error messages based on status code
+    const statusMessages: Record<number, string> = {
+      400: 'Bad Request - Invalid input data',
+      401: 'Unauthorized - Invalid credentials',
+      403: 'Forbidden - Access denied',
+      404: 'Not Found - Resource not found',
+      500: 'Internal Server Error - Server error occurred',
+    };
+    
+    const message = statusMessages[response.status] || `HTTP ${response.status}`;
+    throw new Error(message);
   }
 
   // GET request
