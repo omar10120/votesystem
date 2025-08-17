@@ -1,12 +1,11 @@
 export interface User {
   id: string;
-  email?: string;
-  phone?: string;
-  name: string;
-  role: 'admin' | 'user';
-  isVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  createdByAdminId: number;
   [key: string]: unknown;
 }
 
@@ -95,6 +94,16 @@ export interface VotingSession {
   totalVotes: number;
 }
 
+// New interface to match your API response
+export interface VoteSession {
+  id: number;
+  topicTitle: string;
+  description: string;
+  startedAt: string;
+  endedAt: string;
+  voteSessionStatus: number;
+}
+
 // Updated to match your API response structure
 export interface ApiResponse<T> {
   isSuccess: boolean;
@@ -106,4 +115,20 @@ export interface ApiResponse<T> {
     description: string | null;
     type: number;
   };
+}
+
+// Attendance interface to match your API response
+export interface AttendanceRecord {
+  id: number;
+  userId: number;
+  voteSessionId: number;
+  otpCodeID: number | null;
+  createdByAdminId: number;
+}
+
+// Create attendance request interface
+export interface CreateAttendanceRequest {
+  voteSessionId: number;
+  userId: number;
+  [key: string]: unknown;
 }
