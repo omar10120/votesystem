@@ -67,14 +67,6 @@ export interface OTPResponse {
   expiresAt: Date;
 }
 
-export interface Vote {
-  id: string;
-  userId: string;
-  candidateId: string;
-  timestamp: Date;
-  sessionId: string;
-}
-
 export interface Candidate {
   id: string;
   name: string;
@@ -110,7 +102,7 @@ export interface VoteSession {
 export interface ApiResponse<T> {
   isSuccess: boolean;
   isError: boolean;
-  errors: any[];
+  errors: unknown[];
   value: T;
   topError?: {
     code: string | null;
@@ -133,4 +125,53 @@ export interface CreateAttendanceRequest {
   voteSessionId: number;
   userId: number;
   [key: string]: unknown;
+}
+
+// VoteQuestion interfaces
+export interface VoteQuestionOption {
+  id?: number;
+  title: string;
+  [key: string]: unknown;
+}
+
+export interface VoteQuestion {
+  id: number;
+  title: string;
+  description: string;
+  startedAt: string;
+  endedAt: string;
+  voteSessionId: number;
+  options: VoteQuestionOption[];
+  [key: string]: unknown;
+}
+
+export interface CreateVoteQuestionRequest {
+  title: string;
+  description: string;
+  startedAt: string;
+  endedAt: string;
+  voteSessionId: number;
+  options: VoteQuestionOption[];
+  [key: string]: unknown;
+}
+
+export interface UpdateVoteQuestionRequest extends CreateVoteQuestionRequest {
+  id: number;
+}
+
+// Vote interfaces
+export interface Vote {
+  id: number;
+  votedAt: string;
+  userId: number;
+  voteQuestionOptionId: number;
+  [key: string]: unknown;
+}
+
+export interface VoteWithDetails extends Vote {
+  userName?: string;
+  userEmail?: string;
+  questionTitle?: string;
+  optionTitle?: string;
+  sessionTitle?: string;
 }

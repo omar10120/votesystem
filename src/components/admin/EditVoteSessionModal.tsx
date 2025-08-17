@@ -61,8 +61,7 @@ const EditVoteSessionModal: React.FC<EditVoteSessionModalProps> = ({
         return;
       }
 
-      await voteService.updateVoteSession({
-        id: session.id,
+      await voteService.updateVoteSession(session.id, {
         topicTitle: formData.topicTitle.trim(),
         description: formData.description.trim(),
         startedAt: startDate.toISOString(),

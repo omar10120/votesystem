@@ -47,7 +47,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         fullName: formData.fullName.trim(),
         phoneNumber: formData.phoneNumber.trim(),
         email: formData.email.trim(),
-        isActive: formData.isActive,
+        // isActive: formData.isActive,
       });
 
       // Show success message briefly before closing

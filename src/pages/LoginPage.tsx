@@ -8,6 +8,7 @@ type LoginMode = 'admin' | 'user' | 'request-otp' | 'magic';
 const LoginPage: React.FC = () => {
   const { adminLogin, userLoginWithEmail, requestEmailOTP, isLoading, error, clearError } = useAuth();
   const [mode, setMode] = useState<LoginMode>('admin');
+  const [isRequestingOTP, setIsRequestingOTP] = useState(false);
   
   // Admin login state
   const [adminCredentials, setAdminCredentials] = useState<LoginCredentials>({
@@ -57,9 +58,16 @@ const LoginPage: React.FC = () => {
     if (!requestOTPEmail) {
       return;
     }
-    await requestEmailOTP(requestOTPEmail);
-    setRequestOTPEmail(''); // Clear email after sending OTP
-    setOtpSent(true);
+    setIsRequestingOTP(true);
+    try {
+      await requestEmailOTP(requestOTPEmail);
+      setRequestOTPEmail(''); // Clear email after sending OTP
+      setOtpSent(true);
+    } catch {
+      // Error is handled by the auth context
+    } finally {
+      setIsRequestingOTP(false);
+    }
   };
 
   const resetForm = () => {
@@ -68,6 +76,7 @@ const LoginPage: React.FC = () => {
     setMagicLinkEmail('');
     setRequestOTPEmail('');
     setOtpSent(false);
+    setIsRequestingOTP(false);
     clearError();
   };
 
@@ -234,10 +243,17 @@ const LoginPage: React.FC = () => {
                 <div>
                   <button
                     type="submit"
-                    disabled={!requestOTPEmail}
+                    disabled={!requestOTPEmail || isRequestingOTP}
                     className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    Send OTP
+                    {isRequestingOTP ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Sending OTP...
+                      </div>
+                    ) : (
+                      'Send OTP'
+                    )}
                   </button>
                 </div>
 

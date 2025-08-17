@@ -4,6 +4,7 @@ import type { AttendanceRecord, User, VoteSession } from '../../types/types';
 import CreateAttendanceModal from './CreateAttendanceModal';
 import EditAttendanceModal from './EditAttendanceModal';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import authService from '../../services/authService';
 
 const Attendance: React.FC = () => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -19,6 +20,7 @@ const Attendance: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingAttendance, setDeletingAttendance] = useState<AttendanceRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [requestingOTPFor, setRequestingOTPFor] = useState<number | null>(null);
 
   useEffect(() => {
     fetchAttendance();
@@ -31,7 +33,7 @@ const Attendance: React.FC = () => {
     setError(null);
     
     try {
-      const fetchedAttendance = await voteService.getAttendance();
+      const fetchedAttendance = await voteService.getAttendanceRecords();
       setAttendance(fetchedAttendance);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch attendance');
@@ -78,15 +80,18 @@ const Attendance: React.FC = () => {
     setTimeout(() => setShowSuccessMessage(false), 3000);
   };
 
-  const handleRequestEmailOTP = async (email: string, userName: string) => {
+  const handleRequestEmailOTP = async (email: string, userName: string, userId: number) => {
+    setRequestingOTPFor(userId);
     try {
-      await voteService.requestEmailOTP(email);
+      await authService.requestEmailOTP(email);
       setShowSuccessMessage(true);
       setSuccessMessage(`Email OTP requested successfully for ${userName}!`);
       setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to request email OTP');
       setTimeout(() => setError(null), 5000);
+    } finally {
+      setRequestingOTPFor(null);
     }
   };
 
@@ -257,11 +262,23 @@ const Attendance: React.FC = () => {
                   <div className="text-right">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => handleRequestEmailOTP(getUserEmail(record.userId), getUserName(record.userId))}
-                        className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                        onClick={() => handleRequestEmailOTP(getUserEmail(record.userId), getUserName(record.userId), record.userId)}
+                        className={`px-3 py-1 text-xs rounded transition-colors ${
+                          requestingOTPFor === record.userId
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        }`}
                         title="Request Email OTP for this user"
+                        disabled={requestingOTPFor === record.userId}
                       >
-                        Request OTP
+                        {requestingOTPFor === record.userId ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b border-purple-600 mr-1"></div>
+                            Requesting...
+                          </div>
+                        ) : (
+                          'Request OTP'
+                        )}
                       </button>
                       <button
                         onClick={() => handleEditAttendance(record)}

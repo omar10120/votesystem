@@ -47,7 +47,7 @@ class AuthService {
     
     // Handle error response format
     if (response.errors && Array.isArray(response.errors) && response.errors.length > 0) {
-      const firstError = response.errors[0];
+      const firstError = response.errors[0] as { description?: string; code?: string };
       throw new Error(firstError.description || firstError.code || 'Login failed');
     }
     
@@ -184,7 +184,7 @@ class AuthService {
     if (!response.isSuccess) {
       // Handle error response format
       if (response.errors && Array.isArray(response.errors) && response.errors.length > 0) {
-        const firstError = response.errors[0];
+        const firstError = response.errors[0] as { description?: string; code?: string };
         throw new Error(firstError.description || firstError.code || 'Failed to request email OTP');
       }
       throw new Error(response.topError?.description || 'Failed to request email OTP');
@@ -246,7 +246,7 @@ class AuthService {
     
     // Handle error response format
     if (response.errors && Array.isArray(response.errors) && response.errors.length > 0) {
-      const firstError = response.errors[0];
+      const firstError = response.errors[0] as { description?: string; code?: string };
       throw new Error(firstError.description || firstError.code || 'Failed to login user');
     }
     

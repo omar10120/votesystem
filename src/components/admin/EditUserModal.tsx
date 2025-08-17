@@ -59,8 +59,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         return;
       }
 
-      await voteService.updateUser({
-        id: user.id,
+      await voteService.updateUser(user.id, {
         fullName: formData.fullName.trim(),
         phoneNumber: formData.phoneNumber.trim(),
         email: formData.email.trim(),

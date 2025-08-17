@@ -7,6 +7,8 @@ import EditVoteSessionModal from '../components/admin/EditVoteSessionModal';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import Users from '../components/admin/Users';
 import Attendance from '../components/admin/Attendance';
+import VoteQuestionSection from '../components/admin/VoteQuestionSection';
+import VoteSection from '../components/admin/VoteSection';
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -163,6 +165,8 @@ const AdminDashboard: React.FC = () => {
             {[
               { id: 'overview', label: 'Overview' },
               { id: 'voting-sessions', label: 'Voting Sessions' },
+              { id: 'vote-questions', label: 'Vote Questions' },
+              { id: 'votes', label: 'Votes' },
               { id: 'candidates', label: 'Candidates' },
               { id: 'users', label: 'Users' },
               { id: 'attendance', label: 'Attendance' },
@@ -494,6 +498,12 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Vote Questions Tab */}
+        {activeTab === 'vote-questions' && <VoteQuestionSection voteSessions={voteSessions} />}
+
+        {/* Votes Tab */}
+        {activeTab === 'votes' && <VoteSection voteSessions={voteSessions} />}
+
         {/* Users Tab */}
         {activeTab === 'users' && <Users />}
 
@@ -501,7 +511,7 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'attendance' && <Attendance />}
 
         {/* Other tabs placeholder */}
-        {activeTab !== 'overview' && activeTab !== 'voting-sessions' && activeTab !== 'users' && activeTab !== 'attendance' && (
+        {activeTab !== 'overview' && activeTab !== 'voting-sessions' && activeTab !== 'vote-questions' && activeTab !== 'votes' && activeTab !== 'users' && activeTab !== 'attendance' && (
           <div className="px-4 py-6 sm:px-0">
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
