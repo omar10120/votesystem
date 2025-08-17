@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import type { LoginCredentials, UserLoginData, OTPVerification } from '../types/types';
+import type { LoginCredentials, UserLoginData } from '../types/types';
 
 
-type LoginMode = 'admin' | 'user' | 'otp' | 'magic';
+type LoginMode = 'admin' | 'user' | 'request-otp' | 'magic';
 
 const LoginPage: React.FC = () => {
-  const { adminLogin, userLogin, verifyOTP, isLoading, error, clearError } = useAuth();
+  const { adminLogin, userLoginWithEmail, requestEmailOTP, isLoading, error, clearError } = useAuth();
   const [mode, setMode] = useState<LoginMode>('admin');
   
   // Admin login state
@@ -19,16 +19,15 @@ const LoginPage: React.FC = () => {
   const [userData, setUserData] = useState<UserLoginData>({
     email: '',
     phone: '',
-  });
-
-  // OTP verification state
-  const [otpData, setOtpData] = useState<OTPVerification>({
-    identifier: '',
     otp: '',
   });
 
   // Magic link state
   const [magicLinkEmail, setMagicLinkEmail] = useState('');
+
+  // Request OTP state
+  const [requestOTPEmail, setRequestOTPEmail] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,19 +38,10 @@ const LoginPage: React.FC = () => {
   const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
-    const identifier = userData.email || userData.phone;
-    if (!identifier) {
+    if (!userData.email || !userData.otp) {
       return;
     }
-    await userLogin(userData);
-    setOtpData(prev => ({ ...prev, identifier }));
-    setMode('otp');
-  };
-
-  const handleOTPVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearError();
-    await verifyOTP(otpData);
+    await userLoginWithEmail(userData.email, userData.otp);
   };
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -61,11 +51,23 @@ const LoginPage: React.FC = () => {
     console.log('Magic link sent to:', magicLinkEmail);
   };
 
+  const handleRequestOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    if (!requestOTPEmail) {
+      return;
+    }
+    await requestEmailOTP(requestOTPEmail);
+    setRequestOTPEmail(''); // Clear email after sending OTP
+    setOtpSent(true);
+  };
+
   const resetForm = () => {
     setAdminCredentials({ userName: '', password: '' });
-    setUserData({ email: '', phone: '' });
-    setOtpData({ identifier: '', otp: '' });
+    setUserData({ email: '', phone: '', otp: '' });
     setMagicLinkEmail('');
+    setRequestOTPEmail('');
+    setOtpSent(false);
     clearError();
   };
 
@@ -105,6 +107,16 @@ const LoginPage: React.FC = () => {
             Admin
           </button>
           <button
+            onClick={() => { setMode('request-otp'); resetForm(); }}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium ${
+              mode === 'request-otp'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Request OTP
+          </button>
+          <button
             onClick={() => { setMode('user'); resetForm(); }}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium ${
               mode === 'user'
@@ -114,7 +126,7 @@ const LoginPage: React.FC = () => {
           >
             User
           </button>
-          <button
+          {/* <button
             onClick={() => { setMode('magic'); resetForm(); }}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium ${
               mode === 'magic'
@@ -123,7 +135,7 @@ const LoginPage: React.FC = () => {
             }`}
           >
             Magic Link
-          </button>
+          </button> */}
         </div>
 
         {/* Error Display */}
@@ -181,6 +193,64 @@ const LoginPage: React.FC = () => {
           </form>
         )}
 
+        {/* Request OTP Form */}
+        {mode === 'request-otp' && (
+          <form className="mt-8 space-y-6" onSubmit={handleRequestOTP}>
+            {otpSent ? (
+              <div className="text-center space-y-4">
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
+                  ✅ OTP sent successfully to your email!
+                </div>
+                <p className="text-sm text-gray-600">
+                  Check your email for the OTP code, then go to the User tab to login
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setOtpSent(false); setRequestOTPEmail(''); }}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Send to different email
+                </button>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="request-otp-email" className="sr-only">
+                    Email address
+                  </label>
+                  <input
+                    id="request-otp-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Enter your email address"
+                    value={requestOTPEmail}
+                    onChange={(e) => setRequestOTPEmail(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={!requestOTPEmail}
+                    className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Send OTP
+                  </button>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">
+                    After receiving OTP, go to the User tab to login
+                  </p>
+                </div>
+              </>
+            )}
+          </form>
+        )}
+
         {/* User Login Form */}
         {mode === 'user' && (
           <form className="mt-8 space-y-6" onSubmit={handleUserLogin}>
@@ -194,76 +264,39 @@ const LoginPage: React.FC = () => {
                   name="email"
                   type="email"
                   autoComplete="email"
+                  required
                   className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Email address (optional)"
+                  placeholder="Email address"
                   value={userData.email}
                   onChange={(e) => setUserData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
               <div>
-                <label htmlFor="user-phone" className="sr-only">
-                  Phone number
+                <label htmlFor="user-otp" className="sr-only">
+                  OTP Code
                 </label>
                 <input
-                  id="user-phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Phone number (optional)"
-                  value={userData.phone}
-                  onChange={(e) => setUserData(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={!userData.email && !userData.phone}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                Send OTP
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* OTP Verification Form */}
-        {mode === 'otp' && (
-          <form className="mt-8 space-y-6" onSubmit={handleOTPVerification}>
-            <div>
-              <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
-                Enter OTP sent to {otpData.identifier}
-              </label>
-              <div className="mt-1">
-                <input
-                  id="otp"
+                  id="user-otp"
                   name="otp"
                   type="text"
+                  autoComplete="one-time-code"
                   required
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter 6-digit OTP"
-                  value={otpData.otp}
-                  onChange={(e) => setOtpData(prev => ({ ...prev, otp: e.target.value }))}
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Enter OTP Code"
+                  value={userData.otp || ''}
+                  onChange={(e) => setUserData(prev => ({ ...prev, otp: e.target.value }))}
                   maxLength={6}
                 />
               </div>
             </div>
 
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => { setMode('user'); resetForm(); }}
-                className="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Back
-              </button>
+            <div>
               <button
                 type="submit"
-                className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={!userData.email || !userData.otp}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Verify OTP
+                Sign in as User
               </button>
             </div>
           </form>

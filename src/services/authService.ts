@@ -2,30 +2,43 @@ import type {
   LoginCredentials, 
   UserLoginData, 
   OTPVerification, 
-  MagicLinkData, 
+  // MagicLinkData, 
   AuthResponse, 
   OTPResponse,
   User 
 } from '../types/types';
 import apiClient from './apiClient';
+import { jwtDecode } from 'jwt-decode';
+
+// Interface for JWT payload
+interface JWTPayload {
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': string;
+  'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': string;
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': string;
+  PhoneNumber: string;
+  Email: string;
+  exp: number;
+  iss: string;
+  aud: string;
+}
 
 class AuthService {
   // Admin login with email/password
   async adminLogin(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     const response = await apiClient.post<AuthResponse>('/Auth/admin-login', credentials);
     if (response.isSuccess && response.value) {
-      const { token, userName, role, fullName, phoneNumber } = response.value;
+      const { token, userName, fullName, phoneNumber } = response.value;
       
       // Create a user object that matches our frontend expectations
       const user: User = {
-        id: '1', // You might want to get this from the API response
-        name: fullName,
-        email: userName.includes('@') ? userName : undefined,
-        phone: phoneNumber || undefined,
-        role: role.toLowerCase() as 'admin' | 'user',
-        isVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        id: 1, // You might want to get this from the API response
+        fullName: fullName,
+        phoneNumber: phoneNumber || '',
+        email: userName.includes('@') ? userName : '',
+        role: 'admin', // Admin login
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdByAdminId: 1,
       };
       
       apiClient.setToken(token);
@@ -47,17 +60,17 @@ class AuthService {
   async verifyOTP(otpData: OTPVerification): Promise<{ user: User; token: string }> {
     const response = await apiClient.post<AuthResponse>('/auth/user/verify-otp', otpData);
     if (response.isSuccess && response.value) {
-      const { token, userName, role, fullName, phoneNumber } = response.value;
+      const { token, userName, fullName, phoneNumber } = response.value;
       
       const user: User = {
-        id: '1',
-        name: fullName,
-        email: userName.includes('@') ? userName : undefined,
-        phone: phoneNumber || undefined,
-        role: role.toLowerCase() as 'admin' | 'user',
-        isVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        id: 1,
+        fullName: fullName,
+        phoneNumber: phoneNumber || '',
+        email: userName.includes('@') ? userName : '',
+        role: 'user', // User login
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdByAdminId: 1,
       };
       
       apiClient.setToken(token);
@@ -66,34 +79,34 @@ class AuthService {
     throw new Error(response.topError?.description || 'OTP verification failed');
   }
 
-  // Send magic link
-  async sendMagicLink(magicLinkData: MagicLinkData): Promise<{ success: boolean; message: string }> {
-    const response = await apiClient.post<{ success: boolean; message: string }>('/auth/magic-link', magicLinkData);
-    if (response.isSuccess) {
-      return { success: true, message: response.topError?.description || 'Magic link sent successfully' };
-    }
-    throw new Error(response.topError?.description || 'Failed to send magic link');
-  }
-
+ 
   // Verify magic link token
   async verifyMagicLink(token: string): Promise<{ user: User; token: string }> {
-    const response = await apiClient.post<AuthResponse>('/auth/magic-link/verify', { token });
+    const response = await apiClient.post<string>('/Auth/user-login-magic-link', { token });
     if (response.isSuccess && response.value) {
-      const { token: newToken, userName, role, fullName, phoneNumber } = response.value;
+      // The API returns a JWT token string, decode it to get user info
+      const jwtToken = response.value;
       
-      const user: User = {
-        id: '1',
-        name: fullName,
-        email: userName.includes('@') ? userName : undefined,
-        phone: phoneNumber || undefined,
-        role: role.toLowerCase() as 'admin' | 'user',
-        isVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      apiClient.setToken(newToken);
-      return { user, token: newToken };
+      try {
+        const decoded = jwtDecode<JWTPayload>(jwtToken);
+        
+        const user: User = {
+          id: parseInt(decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']),
+          fullName: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+          phoneNumber: decoded.PhoneNumber,
+          email: decoded.Email,
+          role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'].toLowerCase(),
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          createdByAdminId: 1,
+        };
+        
+        apiClient.setToken(jwtToken);
+        return { user, token: jwtToken };
+      } catch (decodeError) {
+        console.error('Failed to decode magic link JWT:', decodeError);
+        throw new Error('Invalid magic link token');
+      }
     }
     throw new Error(response.topError?.description || 'Magic link verification failed');
   }
@@ -116,17 +129,17 @@ class AuthService {
 
     const response = await apiClient.post<AuthResponse>('/auth/refresh', { refreshToken });
     if (response.isSuccess && response.value) {
-      const { token, userName, role, fullName, phoneNumber } = response.value;
+      const { token, userName, fullName, phoneNumber } = response.value;
       
       const user: User = {
-        id: '1',
-        name: fullName,
-        email: userName.includes('@') ? userName : undefined,
-        phone: phoneNumber || undefined,
-        role: role.toLowerCase() as 'admin' | 'user',
-        isVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        id: 1,
+        fullName: fullName,
+        phoneNumber: phoneNumber || '',
+        email: userName.includes('@') ? userName : '',
+        role: 'user', // Refresh token login
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdByAdminId: 1,
       };
       
       apiClient.setToken(token);
@@ -156,6 +169,69 @@ class AuthService {
   // Get stored token
   getToken(): string | null {
     return localStorage.getItem('authToken');
+  }
+
+  // Request email OTP for attendance user
+  async requestEmailOTP(email: string): Promise<void> {
+    const response = await apiClient.post('/Auth/request-email-otp', { email });
+    if (!response.isSuccess) {
+      throw new Error(response.topError?.description || 'Failed to request email OTP');
+    }
+  }
+
+  // User login with email and OTP
+  async userLoginWithEmail(email: string, otp: string): Promise<User> {
+    const response = await apiClient.post<string>('/Auth/user-login-Email', { email, otp });
+    if (response.isSuccess && response.value) {
+      // The API returns a JWT token string, not a User object
+      const token = response.value;
+      
+      try {
+        // Decode the JWT token to extract user information
+        const decoded = jwtDecode<JWTPayload>(token);
+        console.log('Decoded JWT payload:', decoded);
+        
+        // Validate that required fields exist in the JWT payload
+        if (!decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
+            !decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+            !decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
+            !decoded.PhoneNumber ||
+            !decoded.Email) {
+          console.error('Missing required fields in JWT:', {
+            nameidentifier: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
+            role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+            name: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+            phoneNumber: decoded.PhoneNumber,
+            email: decoded.Email
+          });
+          throw new Error('JWT token missing required user information');
+        }
+        
+        // Create a User object from the JWT payload
+        const user: User = {
+          id: parseInt(decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']),
+          fullName: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+          phoneNumber: decoded.PhoneNumber,
+          email: decoded.Email,
+          role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'].toLowerCase(),
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          createdByAdminId: 1, // Default value since it's not in the JWT
+        };
+        
+        // Set the token in the API client
+        apiClient.setToken(token);
+        
+        return user;
+      } catch (decodeError) {
+        console.error('Failed to decode JWT token:', decodeError);
+        if (decodeError instanceof Error) {
+          throw new Error(`Token decode error: ${decodeError.message}`);
+        }
+        throw new Error('Invalid response format from server');
+      }
+    }
+    throw new Error(response.topError?.description || 'Failed to login user');
   }
 }
 

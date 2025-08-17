@@ -1,8 +1,9 @@
 export interface User {
-  id: string;
+  id: number;
   fullName: string;
   phoneNumber: string;
   email: string;
+  role: string;
   isActive: boolean;
   createdAt: string;
   createdByAdminId: number;
@@ -36,6 +37,7 @@ export interface LoginCredentials {
 export interface UserLoginData {
   email?: string;
   phone?: string;
+  otp?: string;
   [key: string]: unknown;
 }
 

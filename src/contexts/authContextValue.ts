@@ -1,10 +1,12 @@
 import type { LoginCredentials, UserLoginData, OTPVerification, MagicLinkData } from '../types/types';
-import type { AuthState } from './authReducer';
+import type { AuthState, AuthAction } from './authReducer';
 import authService from '../services/authService';
 
 export interface AuthContextType extends AuthState {
   adminLogin: (credentials: LoginCredentials) => Promise<void>;
   userLogin: (userData: UserLoginData) => Promise<void>;
+  userLoginWithEmail: (email: string, otp: string) => Promise<void>;
+  requestEmailOTP: (email: string) => Promise<void>;
   verifyOTP: (otpData: OTPVerification) => Promise<void>;
   sendMagicLink: (data: MagicLinkData) => Promise<void>;
   logout: () => Promise<void>;
@@ -13,7 +15,7 @@ export interface AuthContextType extends AuthState {
 
 export const createAuthContextValue = (
   state: AuthState,
-  dispatch: React.Dispatch<any>
+  dispatch: React.Dispatch<AuthAction>
 ): AuthContextType => ({
   ...state,
   adminLogin: async (credentials: LoginCredentials) => {
@@ -37,6 +39,27 @@ export const createAuthContextValue = (
     }
   },
 
+  userLoginWithEmail: async (email: string, otp: string) => {
+    dispatch({ type: 'AUTH_START' });
+    try {
+      const user = await authService.userLoginWithEmail(email, otp);
+      dispatch({ type: 'AUTH_SUCCESS', payload: user });
+    } catch (error) {
+      dispatch({ type: 'AUTH_FAILURE', payload: error instanceof Error ? error.message : 'Login failed' });
+    }
+  },
+
+  requestEmailOTP: async (email: string) => {
+    dispatch({ type: 'AUTH_START' });
+    try {
+      await authService.requestEmailOTP(email);
+      // Don't set user, just show success message
+      dispatch({ type: 'AUTH_LOGOUT' });
+    } catch (error) {
+      dispatch({ type: 'AUTH_FAILURE', payload: error instanceof Error ? error.message : 'Failed to request OTP' });
+    }
+  },
+
   verifyOTP: async (otpData: OTPVerification) => {
     dispatch({ type: 'AUTH_START' });
     try {
@@ -50,11 +73,11 @@ export const createAuthContextValue = (
   sendMagicLink: async (data: MagicLinkData) => {
     dispatch({ type: 'AUTH_START' });
     try {
-      await authService.sendMagicLink(data);
-      // Don't set user yet, wait for magic link verification
-      dispatch({ type: 'AUTH_LOGOUT' });
+      // Use the magic link login endpoint with the token
+      const { user } = await authService.verifyMagicLink(data.email);
+      dispatch({ type: 'AUTH_SUCCESS', payload: user });
     } catch (error) {
-      dispatch({ type: 'AUTH_FAILURE', payload: error instanceof Error ? error.message : 'Failed to send magic link' });
+      dispatch({ type: 'AUTH_FAILURE', payload: error instanceof Error ? error.message : 'Failed to verify magic link' });
     }
   },
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import type { Candidate, VotingSession } from '../types/types';
+// import type { Candidate, VotingSession } from '../types/types';
+import type {  VotingSession } from '../types/types';
 
 const VotingPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -96,6 +97,7 @@ const VotingPage: React.FC = () => {
       // Show success message
       alert('Your vote has been recorded successfully!');
     } catch (error) {
+      console.error('Vote error:', error);
       alert('Failed to record your vote. Please try again.');
     } finally {
       setIsVoting(false);
@@ -164,7 +166,7 @@ const VotingPage: React.FC = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{votingSession.title}</h1>
-              <p className="text-gray-600">Welcome, {user.name}</p>
+              <p className="text-gray-600">Welcome, {user.fullName}</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
